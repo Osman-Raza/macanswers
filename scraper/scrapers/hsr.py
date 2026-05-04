@@ -15,8 +15,7 @@ from supabase import create_client # type: ignore
 
 load_dotenv()
 
-GTFS_URL = "https://www.hamilton.ca/sites/default/files/media/browser/2022-07/HSR_GTFS.zip"
-
+GTFS_URL = "https://opendata.hamilton.ca/GTFS-Static/google_transit.zip"
 def run():
     import requests
     print("Downloading HSR GTFS feed ...")

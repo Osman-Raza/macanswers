@@ -15,18 +15,40 @@ import argparse
 import sys
 
 from scrapers.pages import (
+    # Hourly
     SnowDayScraper,
     AnnouncementsScraper,
+    # Semester
     TuitionScraper,
     CourseSelectionScraper,
     OSAPScraper,
     HousingDeadlinesScraper,
     DentalPlanScraper,
     AcademicCalendarScraper,
+    DatesAndDeadlinesScraper,
+    ExamsScraper,
+    GradesScraper,
+    TranscriptScraper,
+    MosaicScraper,
+    ScholarshipsScraper,
+    StudentWellnessScraper,
+    MentalHealthScraper,
+    StudentHealthScraper,
+    AccessibilityScraper,
+    LibraryHoursScraper,
+    LibraryServicesScraper,
+    RecCentreScraper,
+    CareerServicesScraper,
+    ParkingTransportScraper,
+    ITHelpScraper,
+    MSUServicesScraper,
+    InternationalStudentsScraper,
+    AcademicIntegrityScraper,
 )
 from scrapers.hsr import run as run_hsr
 
 HOURLY = [SnowDayScraper, AnnouncementsScraper]
+
 SEMESTER = [
     TuitionScraper,
     CourseSelectionScraper,
@@ -34,6 +56,25 @@ SEMESTER = [
     HousingDeadlinesScraper,
     DentalPlanScraper,
     AcademicCalendarScraper,
+    DatesAndDeadlinesScraper,
+    ExamsScraper,
+    GradesScraper,
+    TranscriptScraper,
+    MosaicScraper,
+    ScholarshipsScraper,
+    StudentWellnessScraper,
+    MentalHealthScraper,
+    StudentHealthScraper,
+    AccessibilityScraper,
+    LibraryHoursScraper,
+    LibraryServicesScraper,
+    RecCentreScraper,
+    CareerServicesScraper,
+    ParkingTransportScraper,
+    ITHelpScraper,
+    MSUServicesScraper,
+    InternationalStudentsScraper,
+    AcademicIntegrityScraper,
 ]
 
 def main():
