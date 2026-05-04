@@ -92,9 +92,12 @@ export default function KnowledgeBase() {
     <div className={styles.page}>
       {empty && (
         <div className={styles.hero}>
-          <h1 className={styles.heroTitle}>Ask anything about McMaster.</h1>
+          <span className={styles.heroEyebrow}>McMaster University</span>
+          <h1 className={styles.heroTitle}>
+            Ask anything about <span>Mac.</span>
+          </h1>
           <p className={styles.heroSub}>
-            Instant answers with cited sources — tuition, dates, OSAP, snow days, and more.
+            Instant answers with cited sources — tuition, deadlines, OSAP, snow days, and more.
           </p>
           <div className={styles.suggestions}>
             {SUGGESTIONS.map((s) => (

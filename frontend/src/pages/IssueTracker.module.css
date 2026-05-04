@@ -10,30 +10,33 @@
 }
 
 .sidebar {
-  width: 320px;
+  width: 300px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  border-left: 1.5px solid var(--mac-border);
-  background: white;
+  border-left: 1px solid var(--border-light);
+  background: var(--surface);
   overflow: hidden;
 }
 
 .sidebarHeader {
-  padding: 18px 16px 12px;
-  border-bottom: 1.5px solid var(--mac-border);
+  padding: 18px 16px 14px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--surface-2);
 }
 
 .sidebarTitle {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--mac-maroon);
+  color: var(--maroon);
+  letter-spacing: -0.02em;
 }
 
 .sidebarHint {
   font-size: 12px;
-  color: var(--mac-muted);
-  margin-top: 4px;
+  color: var(--muted);
+  margin-top: 3px;
+  line-height: 1.4;
 }
 
 .issueList {
@@ -42,130 +45,166 @@
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .empty {
   text-align: center;
-  color: var(--mac-muted);
-  font-size: 14px;
-  padding: 32px 16px;
+  color: var(--muted);
+  font-size: 13.5px;
+  padding: 40px 16px;
+  line-height: 1.5;
 }
 
 .card {
-  background: var(--mac-surface);
-  border: 1.5px solid var(--mac-border);
+  background: var(--bg);
+  border: 1.5px solid var(--border-light);
   border-radius: var(--radius);
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  cursor: default;
 }
 
-.card:hover { border-color: var(--mac-maroon); }
+.card:hover {
+  border-color: var(--bayfront);
+  box-shadow: 0 2px 10px rgba(13,93,120,0.08);
+}
 
 .cardTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .categoryBadge {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: 0.01em;
 }
 
 .upvoteBtn {
-  background: white;
-  border: 1.5px solid var(--mac-border);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
   padding: 3px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
-  color: var(--mac-maroon);
-  transition: background var(--transition);
+  color: var(--maroon);
+  transition: all var(--transition);
+  font-family: var(--font);
 }
 
 .upvoteBtn:hover {
-  background: var(--mac-maroon);
+  background: var(--maroon);
   color: white;
-  border-color: var(--mac-maroon);
+  border-color: var(--maroon);
 }
 
 .cardTitle {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--mac-text);
+  color: var(--text);
   line-height: 1.4;
+  letter-spacing: -0.01em;
 }
 
 .cardDesc {
-  font-size: 12.5px;
-  color: var(--mac-muted);
-  line-height: 1.4;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .cardBuilding {
-  font-size: 12px;
-  color: var(--mac-muted);
+  font-size: 11.5px;
+  color: var(--muted);
 }
 
-/* Modal */
+/* ── Modal ── */
 .modalOverlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.35);
-  display: flex; align-items: center; justify-content: center;
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 8, 18, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
-  background: white;
-  border-radius: 14px;
+  background: var(--surface);
+  border-radius: var(--radius-xl);
   padding: 28px;
   width: 420px;
   max-width: 95vw;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  box-shadow: 0 24px 64px rgba(26, 8, 18, 0.2);
+  animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--border-light);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .modalTitle {
   font-size: 18px;
   font-weight: 700;
-  color: var(--mac-maroon);
+  color: var(--maroon);
+  letter-spacing: -0.03em;
 }
 
 .modalCoords {
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--mac-muted);
+  font-size: 11px;
+  color: var(--muted);
   margin-top: -4px;
+  background: var(--bg);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  width: fit-content;
 }
 
 .label {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: var(--mac-text);
+  color: var(--text-2);
   margin-bottom: -6px;
+  letter-spacing: 0.01em;
 }
 
 .input, .select, .textarea {
   width: 100%;
-  padding: 9px 12px;
-  border: 1.5px solid var(--mac-border);
-  border-radius: 8px;
-  font-family: inherit;
+  padding: 10px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font);
   font-size: 14px;
   outline: none;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  background: var(--surface);
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 .input:focus, .select:focus, .textarea:focus {
-  border-color: var(--mac-maroon);
+  border-color: var(--bayfront);
+  box-shadow: 0 0 0 3px rgba(13, 93, 120, 0.08);
 }
 
 .textarea { resize: vertical; }
@@ -179,23 +218,41 @@
 .cancelBtn {
   flex: 1;
   padding: 10px;
-  border: 1.5px solid var(--mac-border);
-  border-radius: 8px;
-  font-size: 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13.5px;
   font-weight: 500;
-  background: white;
-  color: var(--mac-muted);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font);
+  transition: all var(--transition);
+}
+
+.cancelBtn:hover {
+  border-color: var(--muted);
+  color: var(--text);
 }
 
 .submitBtn {
   flex: 2;
   padding: 10px;
-  background: var(--mac-maroon);
+  background: var(--maroon);
   color: white;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: var(--radius);
+  font-size: 13.5px;
   font-weight: 600;
-  transition: opacity var(--transition);
+  font-family: var(--font);
+  transition: all var(--transition);
+  box-shadow: 0 2px 8px rgba(122,0,60,0.2);
 }
 
-.submitBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.submitBtn:hover:not(:disabled) {
+  background: var(--maroon-dark);
+  box-shadow: 0 4px 14px rgba(122,0,60,0.3);
+}
+
+.submitBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
