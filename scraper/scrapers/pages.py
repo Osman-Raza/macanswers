@@ -6,7 +6,7 @@ from .base import BaseScraper, clean_html
 from bs4 import BeautifulSoup
 
 
-# ── Existing scrapers (bug fixes preserved) ───────────────────────────────────
+# ── Registrar ─────────────────────────────────────────────────────────────────
 
 class TuitionScraper(BaseScraper):
     source_name = "Tuition & Fees"
@@ -48,6 +48,14 @@ class HousingDeadlinesScraper(BaseScraper):
         return clean_html(html)
 
 
+class ResidenceFAQScraper(BaseScraper):
+    source_name = "Residence FAQ"
+    source_url = "https://housing.mcmaster.ca/residence-faq/"
+
+    def parse(self, html: str) -> str:
+        return clean_html(html)
+
+
 class DentalPlanScraper(BaseScraper):
     source_name = "Dental & Health Plan"
     source_url = "https://msumcmaster.ca/services/dental-health-plan/"
@@ -63,31 +71,6 @@ class AcademicCalendarScraper(BaseScraper):
     def parse(self, html: str) -> str:
         return clean_html(html)
 
-
-class AnnouncementsScraper(BaseScraper):
-    """Scrapes the main McMaster news/announcements feed — runs hourly."""
-    source_name = "McMaster Announcements"
-    source_url = "https://dailynews.mcmaster.ca/"
-
-    def parse(self, html: str) -> str:
-        soup = BeautifulSoup(html, "html.parser")
-        articles = soup.select("article")
-        lines = []
-        for a in articles[:20]:
-            title = a.find(["h2", "h3"])
-            summary = a.find("p")
-            link = a.find("a", href=True)
-            if title:
-                lines.append(title.get_text(strip=True))
-            if summary:
-                lines.append(summary.get_text(strip=True))
-            if link and link["href"].startswith("http"):
-                lines.append(f"Read more: {link['href']}")
-            lines.append("")
-        return "\n".join(lines)
-
-
-# ── New scrapers ──────────────────────────────────────────────────────────────
 
 class DatesAndDeadlinesScraper(BaseScraper):
     source_name = "Dates & Deadlines"
@@ -113,14 +96,6 @@ class GradesScraper(BaseScraper):
         return clean_html(html)
 
 
-class TranscriptScraper(BaseScraper):
-    source_name = "Transcripts & Enrolment Verification"
-    source_url = "https://registrar.mcmaster.ca/transcripts-enrolment/"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
-
 class MosaicScraper(BaseScraper):
     source_name = "Mosaic Student Portal Help"
     source_url = "https://registrar.mcmaster.ca/mosaic/"
@@ -136,6 +111,50 @@ class ScholarshipsScraper(BaseScraper):
     def parse(self, html: str) -> str:
         return clean_html(html)
 
+
+class ProgramChangeScraper(BaseScraper):
+    source_name = "Switching Programs"
+    source_url = "https://registrar.mcmaster.ca/registration/program-change/"
+
+    def parse(self, html: str) -> str:
+        return clean_html(html)
+
+
+class GradingSystemScraper(BaseScraper):
+    source_name = "Grading System & GPA Scale"
+    source_url = "https://registrar.mcmaster.ca/exams-grades/grades/"
+
+    def parse(self, html: str) -> str:
+        return clean_html(html)
+
+
+# ── Faculty FAQs ──────────────────────────────────────────────────────────────
+
+class EngineeringFAQScraper(BaseScraper):
+    source_name = "Engineering FAQ"
+    source_url = "https://www.eng.mcmaster.ca/future-students/future-undergraduate-students/how-to-apply/faqs/"
+
+    def parse(self, html: str) -> str:
+        return clean_html(html)
+
+
+class EngineeringCoopFAQScraper(BaseScraper):
+    source_name = "Engineering Co-op FAQ"
+    source_url = "https://www.eng.mcmaster.ca/co-op-career-experience/how-co-op-works/frequently-asked-questions/"
+
+    def parse(self, html: str) -> str:
+        return clean_html(html)
+
+
+class ScienceFAQScraper(BaseScraper):
+    source_name = "Science FAQ"
+    source_url = "https://undergraduate.science.mcmaster.ca/contact/frequently-asked-questions/"
+
+    def parse(self, html: str) -> str:
+        return clean_html(html)
+
+
+# ── Student Wellness ──────────────────────────────────────────────────────────
 
 class StudentWellnessScraper(BaseScraper):
     source_name = "Student Wellness Centre"
@@ -153,14 +172,6 @@ class MentalHealthScraper(BaseScraper):
         return clean_html(html)
 
 
-class StudentHealthScraper(BaseScraper):
-    source_name = "Student Health Services"
-    source_url = "https://shs.mcmaster.ca/"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
-
 class AccessibilityScraper(BaseScraper):
     source_name = "Student Accessibility Services"
     source_url = "https://sas.mcmaster.ca/"
@@ -169,21 +180,7 @@ class AccessibilityScraper(BaseScraper):
         return clean_html(html)
 
 
-class LibraryHoursScraper(BaseScraper):
-    source_name = "Library Hours"
-    source_url = "https://library.mcmaster.ca/about/hours"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
-
-class LibraryServicesScraper(BaseScraper):
-    source_name = "Library Services"
-    source_url = "https://library.mcmaster.ca/"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
+# ── Campus & Student Life ─────────────────────────────────────────────────────
 
 class RecCentreScraper(BaseScraper):
     source_name = "Recreation Centre & Fitness"
@@ -209,25 +206,9 @@ class ParkingTransportScraper(BaseScraper):
         return clean_html(html)
 
 
-class ITHelpScraper(BaseScraper):
-    source_name = "IT Help & Technology Services"
-    source_url = "https://uwts.mcmaster.ca/"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
-
 class MSUServicesScraper(BaseScraper):
     source_name = "MSU Student Union Services"
     source_url = "https://msumcmaster.ca/services/"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
-
-class InternationalStudentsScraper(BaseScraper):
-    source_name = "International Student Services"
-    source_url = "https://international.mcmaster.ca/current-students/"
 
     def parse(self, html: str) -> str:
         return clean_html(html)
@@ -239,3 +220,28 @@ class AcademicIntegrityScraper(BaseScraper):
 
     def parse(self, html: str) -> str:
         return clean_html(html)
+
+
+# ── Announcements ─────────────────────────────────────────────────────────────
+
+class AnnouncementsScraper(BaseScraper):
+    """Scrapes the main McMaster news/announcements feed — runs hourly."""
+    source_name = "McMaster Announcements"
+    source_url = "https://dailynews.mcmaster.ca/"
+
+    def parse(self, html: str) -> str:
+        soup = BeautifulSoup(html, "html.parser")
+        articles = soup.select("article")
+        lines = []
+        for a in articles[:20]:
+            title = a.find(["h2", "h3"])
+            summary = a.find("p")
+            link = a.find("a", href=True)
+            if title:
+                lines.append(title.get_text(strip=True))
+            if summary:
+                lines.append(summary.get_text(strip=True))
+            if link and link["href"].startswith("http"):
+                lines.append(f"Read more: {link['href']}")
+            lines.append("")
+        return "\n".join(lines)
