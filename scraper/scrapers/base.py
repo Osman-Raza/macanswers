@@ -58,7 +58,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     for text in texts:
         result = genai.embed_content(model=_embed_model, content=text)
         embeddings.append(result["embedding"])
-        time.sleep(0.5)   # increased to avoid rate limits
+        time.sleep(2)   # increased to avoid rate limits
     return embeddings
 
 
