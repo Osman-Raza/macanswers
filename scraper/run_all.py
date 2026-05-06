@@ -1,11 +1,9 @@
 """
 run_all.py — called by GitHub Actions with a --group flag.
-
 Groups:
   hourly   → time-sensitive pages (snow days, announcements)
   semester → slow-changing pages (tuition, housing, OSAP, etc.)
   weekly   → transit data
-
 Usage:
   python run_all.py --group hourly
   python run_all.py --group semester
@@ -13,7 +11,6 @@ Usage:
 """
 import argparse
 import sys
-
 from scrapers.pages import (
     # Hourly
     SnowDayScraper,
@@ -31,7 +28,6 @@ from scrapers.pages import (
     GradesScraper,
     MosaicScraper,
     ScholarshipsScraper,
-    ProgramChangeScraper,
     GradingSystemScraper,
     EngineeringFAQScraper,
     EngineeringCoopFAQScraper,
@@ -44,6 +40,7 @@ from scrapers.pages import (
     ParkingTransportScraper,
     MSUServicesScraper,
     AcademicIntegrityScraper,
+    ProgramRequirementsScraper,
 )
 from scrapers.hsr import run as run_hsr
 
@@ -74,6 +71,7 @@ SEMESTER = [
     ParkingTransportScraper,
     MSUServicesScraper,
     AcademicIntegrityScraper,
+    ProgramRequirementsScraper,
 ]
 
 def main():

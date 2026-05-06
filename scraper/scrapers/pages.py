@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 class TuitionScraper(BaseScraper):
     source_name = "Tuition & Fees"
-    source_url = "https://registrar.mcmaster.ca/tuition-fees/"
+    source_url = "https://registrar.mcmaster.ca/fees/undergraduate/"
 
     def parse(self, html: str) -> str:
         return clean_html(html)
@@ -237,3 +237,45 @@ class AnnouncementsScraper(BaseScraper):
                 lines.append(f"Read more: {link['href']}")
             lines.append("")
         return "\n".join(lines)
+    
+class ProgramRequirementsScraper(BaseScraper):
+    source_name = "Program Requirements & Required Courses"
+    source_url = "https://academiccalendars.romcmaster.ca/content.php?catoid=53&navoid=10776"
+
+    def parse(self, html: str) -> str:
+        return ""
+
+    def run(self):
+        text = """
+        McMaster University program requirements and required courses for all programs
+        can be found in the Academic Calendar.
+
+        To find required courses for your program:
+        1. Go to: https://academiccalendars.romcmaster.ca/content.php?catoid=53&navoid=10776
+        2. Find your faculty (Engineering, Science, Business, Humanities, Social Sciences, Health Sciences)
+        3. Click on your specific program name
+        4. You will see all required courses, electives, and degree requirements listed
+
+        This page is updated every academic year and contains the official course requirements
+        for every undergraduate program at McMaster University including co-op variants.
+
+        Common programs and their faculties:
+        - Software Engineering, Computer Engineering, Mechanical Engineering → Faculty of Engineering
+        - Computer Science, Biology, Chemistry, Physics, Mathematics → Faculty of Science
+        - Commerce, MBA → DeGroote School of Business
+        - Nursing, Health Sciences → Faculty of Health Sciences
+        - English, History, Philosophy → Faculty of Humanities
+        - Economics, Political Science, Sociology, Psychology → Faculty of Social Sciences
+        """
+        from .base import chunk_text, embed_texts, get_supabase
+        chunks = chunk_text(text)
+        print(f"[{self.source_name}] {len(chunks)} chunks — embedding ...")
+        embeddings = embed_texts(chunks)
+        sb = get_supabase()
+        sb.table("knowledge_chunks").delete().eq("source_url", self.source_url).execute()
+        rows = [
+            {"source_url": self.source_url, "source_name": self.source_name, "content": chunk, "embedding": emb}
+            for chunk, emb in zip(chunks, embeddings)
+        ]
+        sb.table("knowledge_chunks").insert(rows).execute()
+        print(f"[{self.source_name}] ✓ {len(rows)} chunks saved.")
