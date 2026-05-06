@@ -62,7 +62,6 @@ SEMESTER = [
     GradesScraper,
     MosaicScraper,
     ScholarshipsScraper,
-    ProgramChangeScraper,
     GradingSystemScraper,
     EngineeringFAQScraper,
     EngineeringCoopFAQScraper,

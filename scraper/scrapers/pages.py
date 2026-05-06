@@ -112,14 +112,6 @@ class ScholarshipsScraper(BaseScraper):
         return clean_html(html)
 
 
-class ProgramChangeScraper(BaseScraper):
-    source_name = "Switching Programs"
-    source_url = "https://registrar.mcmaster.ca/registration/program-change/"
-
-    def parse(self, html: str) -> str:
-        return clean_html(html)
-
-
 class GradingSystemScraper(BaseScraper):
     source_name = "Grading System & GPA Scale"
     source_url = "https://registrar.mcmaster.ca/exams-grades/grades/"
