@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { api } from "../lib/api.js";
-import { getVoterToken } from "../lib/voter.js";
+import { useAuth } from "../auth/AuthContext.jsx";
 import styles from "./IssueTracker.module.css";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -30,7 +30,7 @@ const CATEGORY_LABELS = {
   other:         "📌 Other",
 };
 
-function IssueCard({ issue, onUpvote }) {
+function IssueCard({ issue, onUpvote, onSignInRequired, userUpvoted }) {
   return (
     <div className={styles.card}>
       <div className={styles.cardTop}>
@@ -40,7 +40,10 @@ function IssueCard({ issue, onUpvote }) {
         >
           {CATEGORY_LABELS[issue.category]}
         </span>
-        <button className={styles.upvoteBtn} onClick={() => onUpvote(issue.id)}>
+        <button
+          className={`${styles.upvoteBtn} ${userUpvoted ? styles.upvoted : ""}`}
+          onClick={() => onUpvote(issue.id)}
+        >
           ▲ {issue.upvotes}
         </button>
       </div>
@@ -52,14 +55,10 @@ function IssueCard({ issue, onUpvote }) {
 }
 
 function ReportModal({ lngLat, onClose, onSubmit }) {
-  const [form, setForm] = useState({
-    title: "", description: "", category: "other", building: "",
-  });
+  const [form, setForm] = useState({ title: "", description: "", category: "other", building: "" });
   const [loading, setLoading] = useState(false);
 
-  function set(key, val) {
-    setForm((f) => ({ ...f, [key]: val }));
-  }
+  function set(key, val) { setForm((f) => ({ ...f, [key]: val })); }
 
   async function handleSubmit() {
     if (!form.title.trim()) return;
@@ -76,9 +75,7 @@ function ReportModal({ lngLat, onClose, onSubmit }) {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <h3 className={styles.modalTitle}>Report an Issue</h3>
-        <p className={styles.modalCoords}>
-          {lngLat.lat.toFixed(5)}, {lngLat.lng.toFixed(5)}
-        </p>
+        <p className={styles.modalCoords}>{lngLat.lat.toFixed(5)}, {lngLat.lng.toFixed(5)}</p>
 
         <label className={styles.label}>Category</label>
         <select className={styles.select} value={form.category} onChange={(e) => set("category", e.target.value)}>
@@ -107,14 +104,15 @@ function ReportModal({ lngLat, onClose, onSubmit }) {
   );
 }
 
-export default function IssueTracker() {
+export default function IssueTracker({ onSignInRequired }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const [issues, setIssues] = useState([]);
   const [pendingLngLat, setPendingLngLat] = useState(null);
+  const [upvotedIds, setUpvotedIds] = useState(new Set());
+  const { user } = useAuth();
 
-  // Init map
   useEffect(() => {
     if (mapRef.current) return;
     const map = new mapboxgl.Map({
@@ -124,18 +122,21 @@ export default function IssueTracker() {
       zoom: 15.5,
     });
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
-    map.on("click", (e) => setPendingLngLat(e.lngLat));
+    map.on("click", (e) => {
+      if (!user) {
+        onSignInRequired();
+        return;
+      }
+      setPendingLngLat(e.lngLat);
+    });
     mapRef.current = map;
-
     return () => { map.remove(); mapRef.current = null; };
-  }, []);
+  }, [user]);
 
-  // Load issues
   useEffect(() => {
     api.getIssues().then(setIssues).catch(console.error);
   }, []);
 
-  // Render markers
   useEffect(() => {
     if (!mapRef.current) return;
     markersRef.current.forEach((m) => m.remove());
@@ -144,24 +145,12 @@ export default function IssueTracker() {
     issues.forEach((issue) => {
       const size = Math.max(14, Math.min(34, 14 + issue.upvotes * 2));
       const el = document.createElement("div");
-      el.style.cssText = `
-        width: ${size}px; height: ${size}px;
-        border-radius: 50%;
-        background: ${CATEGORY_COLORS[issue.category]};
-        border: 2.5px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-        cursor: pointer;
-        transition: transform 0.15s ease;
-      `;
+      el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${CATEGORY_COLORS[issue.category]};border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;transition:transform 0.15s ease;`;
       el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.2)"; });
       el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
 
       const popup = new mapboxgl.Popup({ offset: 12, closeButton: false })
-        .setHTML(`
-          <strong style="font-family:DM Sans,sans-serif;font-size:13px">${issue.title}</strong>
-          <br/><span style="font-size:12px;color:#666">${CATEGORY_LABELS[issue.category]} · ▲ ${issue.upvotes}</span>
-          ${issue.building ? `<br/><span style="font-size:11px;color:#888">📍 ${issue.building}</span>` : ""}
-        `);
+        .setHTML(`<strong style="font-family:Sora,sans-serif;font-size:13px">${issue.title}</strong><br/><span style="font-size:12px;color:#666">${CATEGORY_LABELS[issue.category]} · ▲ ${issue.upvotes}</span>${issue.building ? `<br/><span style="font-size:11px;color:#888">📍 ${issue.building}</span>` : ""}`);
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat([issue.longitude, issue.latitude])
@@ -173,13 +162,17 @@ export default function IssueTracker() {
   }, [issues]);
 
   async function handleUpvote(id) {
-    const token = getVoterToken();
+    if (!user) {
+      onSignInRequired();
+      return;
+    }
+    if (upvotedIds.has(id)) return;
+
     try {
-      await api.upvoteIssue(id, token);
-      setIssues((prev) =>
-        prev.map((i) => i.id === id ? { ...i, upvotes: i.upvotes + 1 } : i)
-      );
-    } catch { /* already voted — silently ignore */ }
+      await api.upvoteIssue(id, user.id);
+      setUpvotedIds((prev) => new Set([...prev, id]));
+      setIssues((prev) => prev.map((i) => i.id === id ? { ...i, upvotes: i.upvotes + 1 } : i));
+    } catch { /* already voted */ }
   }
 
   async function handleReport(payload) {
@@ -194,14 +187,20 @@ export default function IssueTracker() {
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
           <h2 className={styles.sidebarTitle}>Open Issues</h2>
-          <p className={styles.sidebarHint}>Click the map to report a new issue.</p>
+          <p className={styles.sidebarHint}>
+            {user ? "Click the map to report a new issue." : "Sign in with your McMaster email to report or vote."}
+          </p>
         </div>
         <div className={styles.issueList}>
-          {issues.length === 0 && (
-            <p className={styles.empty}>No open issues — campus is looking good 🎉</p>
-          )}
+          {issues.length === 0 && <p className={styles.empty}>No open issues — campus is looking good 🎉</p>}
           {issues.map((issue) => (
-            <IssueCard key={issue.id} issue={issue} onUpvote={handleUpvote} />
+            <IssueCard
+              key={issue.id}
+              issue={issue}
+              onUpvote={handleUpvote}
+              onSignInRequired={onSignInRequired}
+              userUpvoted={upvotedIds.has(issue.id)}
+            />
           ))}
         </div>
       </aside>
