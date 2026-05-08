@@ -1,3 +1,4 @@
+import { supabase } from "../auth/supabase.js";
 import { useState, useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import { api } from "../lib/api.js";
@@ -30,7 +31,7 @@ const CATEGORY_LABELS = {
   other:         "📌 Other",
 };
 
-function IssueCard({ issue, onUpvote, onSignInRequired, userUpvoted }) {
+function IssueCard({ issue, onUpvote, onDelete, userUpvoted, isOwner }) {
   return (
     <div className={styles.card}>
       <div className={styles.cardTop}>
@@ -40,12 +41,23 @@ function IssueCard({ issue, onUpvote, onSignInRequired, userUpvoted }) {
         >
           {CATEGORY_LABELS[issue.category]}
         </span>
-        <button
-          className={`${styles.upvoteBtn} ${userUpvoted ? styles.upvoted : ""}`}
-          onClick={() => onUpvote(issue.id)}
-        >
-          ▲ {issue.upvotes}
-        </button>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <button
+            className={`${styles.upvoteBtn} ${userUpvoted ? styles.upvoted : ""}`}
+            onClick={() => onUpvote(issue.id)}
+          >
+            ▲ {issue.upvotes}
+          </button>
+          {isOwner && (
+            <button
+              className={styles.deleteBtn}
+              onClick={() => onDelete(issue.id)}
+              title="Delete your issue"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
       <p className={styles.cardTitle}>{issue.title}</p>
       {issue.description && <p className={styles.cardDesc}>{issue.description}</p>}
@@ -113,6 +125,24 @@ export default function IssueTracker({ onSignInRequired }) {
   const [upvotedIds, setUpvotedIds] = useState(new Set());
   const { user } = useAuth();
 
+  // Load user's existing upvotes from database
+  useEffect(() => {
+    if (!user) {
+      setUpvotedIds(new Set());
+      return;
+    }
+    async function loadUpvotes() {
+      const { data } = await supabase
+        .from("issue_upvotes")
+        .select("issue_id")
+        .eq("user_id", user.id);
+      if (data) {
+        setUpvotedIds(new Set(data.map((r) => r.issue_id)));
+      }
+    }
+    loadUpvotes();
+  }, [user]);
+
   useEffect(() => {
     if (mapRef.current) return;
     const map = new mapboxgl.Map({
@@ -123,10 +153,7 @@ export default function IssueTracker({ onSignInRequired }) {
     });
     map.addControl(new mapboxgl.NavigationControl(), "top-right");
     map.on("click", (e) => {
-      if (!user) {
-        onSignInRequired();
-        return;
-      }
+      if (!user) { onSignInRequired(); return; }
       setPendingLngLat(e.lngLat);
     });
     mapRef.current = map;
@@ -162,17 +189,23 @@ export default function IssueTracker({ onSignInRequired }) {
   }, [issues]);
 
   async function handleUpvote(id) {
-    if (!user) {
-      onSignInRequired();
-      return;
-    }
+    if (!user) { onSignInRequired(); return; }
     if (upvotedIds.has(id)) return;
-
     try {
       await api.upvoteIssue(id, user.id);
       setUpvotedIds((prev) => new Set([...prev, id]));
       setIssues((prev) => prev.map((i) => i.id === id ? { ...i, upvotes: i.upvotes + 1 } : i));
     } catch { /* already voted */ }
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Delete this issue?")) return;
+    try {
+      await api.deleteIssue(id);
+      setIssues((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
   }
 
   async function handleReport(payload) {
@@ -198,8 +231,9 @@ export default function IssueTracker({ onSignInRequired }) {
               key={issue.id}
               issue={issue}
               onUpvote={handleUpvote}
-              onSignInRequired={onSignInRequired}
+              onDelete={handleDelete}
               userUpvoted={upvotedIds.has(issue.id)}
+              isOwner={user?.id === issue.user_id}
             />
           ))}
         </div>

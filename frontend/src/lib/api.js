@@ -1,5 +1,6 @@
 import { supabase } from "../auth/supabase.js";
 
+
 const BASE = import.meta.env.VITE_API_URL || "";
 
 async function request(path, options = {}) {
@@ -31,6 +32,7 @@ export const api = {
   },
 
   getIssues: () => request("/api/issues"),
+  
 
   reportIssue: (payload) =>
     request("/api/issues", { method: "POST", body: JSON.stringify(payload) }),
@@ -40,6 +42,9 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ userId }),
     }),
+
+  deleteIssue: (id) =>
+    request(`/api/issues/${id}`, { method: "DELETE" }),
 
   transitNext: (route, stop) => {
     const params = new URLSearchParams({ route });

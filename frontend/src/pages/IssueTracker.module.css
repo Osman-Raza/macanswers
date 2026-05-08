@@ -256,3 +256,24 @@
   cursor: not-allowed;
   box-shadow: none;
 }
+
+.deleteBtn {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.deleteBtn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}

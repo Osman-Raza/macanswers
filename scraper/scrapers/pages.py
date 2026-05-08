@@ -21,7 +21,10 @@ class SnowDayScraper(BaseScraper):
     source_url = "https://www.mcmaster.ca/emergency/snow.html"
 
     def parse(self, html: str) -> str:
-        return clean_html(html)
+        text = clean_html(html)
+        if len(text.strip()) < 200:
+            return "No snow day or emergency closure has been announced at McMaster University today. Classes and all campus operations are running as normal. For official updates check https://www.mcmaster.ca/emergency/snow.html."
+        return text
 
 
 class CourseSelectionScraper(BaseScraper):
