@@ -40,7 +40,9 @@ from scrapers.pages import (
     ParkingTransportScraper,
     MSUServicesScraper,
     AcademicIntegrityScraper,
-    ProgramRequirementsScraper,
+    # NOTE: ProgramRequirementsScraper removed — was returning a hardcoded
+    # "go look it up yourself" blurb that polluted search results. Re-add only
+    # after implementing real scraping of the academic calendar.
 )
 from scrapers.hsr import run as run_hsr
 
@@ -71,12 +73,16 @@ SEMESTER = [
     ParkingTransportScraper,
     MSUServicesScraper,
     AcademicIntegrityScraper,
-    ProgramRequirementsScraper,
 ]
+
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--group", choices=["hourly", "semester", "weekly", "all"], default="all")
+    parser.add_argument(
+        "--group",
+        choices=["hourly", "semester", "weekly", "all"],
+        default="all",
+    )
     args = parser.parse_args()
 
     errors = []
@@ -87,7 +93,7 @@ def main():
                 Cls().run()
             except Exception as e:
                 print(f"ERROR [{Cls.source_name}]: {e}", file=sys.stderr)
-                errors.append(str(e))
+                errors.append(f"{Cls.source_name}: {e}")
 
     if args.group in ("semester", "all"):
         for Cls in SEMESTER:
@@ -95,20 +101,20 @@ def main():
                 Cls().run()
             except Exception as e:
                 print(f"ERROR [{Cls.source_name}]: {e}", file=sys.stderr)
-                errors.append(str(e))
+                errors.append(f"{Cls.source_name}: {e}")
 
     if args.group in ("weekly", "all"):
         try:
             run_hsr()
         except Exception as e:
             print(f"ERROR [HSR GTFS]: {e}", file=sys.stderr)
-            errors.append(str(e))
+            errors.append(f"HSR GTFS: {e}")
 
     if errors:
         print(f"\n{len(errors)} scraper(s) failed.", file=sys.stderr)
         sys.exit(1)
-    else:
-        print("\nAll scrapers completed successfully.")
+    print("\nAll scrapers completed successfully.")
+
 
 if __name__ == "__main__":
     main()

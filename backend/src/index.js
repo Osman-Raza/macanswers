@@ -10,12 +10,28 @@ import { scheduleDigest } from "./services/digest.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const IS_PROD = process.env.NODE_ENV === "production";
+
+// ── Startup checks ────────────────────────────────────────────────────────────
+if (IS_PROD && (!process.env.FRONTEND_URL || process.env.FRONTEND_URL === "*")) {
+  throw new Error("FRONTEND_URL must be set to a specific origin in production.");
+}
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.FRONTEND_URL || "*" }));
+// Trust the first reverse proxy (Render/Vercel/Fly/Railway etc.) so req.ip
+// reflects the real client IP instead of the proxy's IP. Without this, the
+// daily rate-limiter would treat all traffic as a single user.
+app.set("trust proxy", 1);
+
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "*",
+    credentials: false,
+  })
+);
 app.use(express.json({ limit: "10kb" }));
 
-// Per-IP rate limit — 20 requests per minute
+// Per-IP rate limit — 20 requests per minute across all /api endpoints
 const limiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
@@ -25,7 +41,7 @@ const limiter = rateLimit({
 });
 app.use("/api", limiter);
 
-// Stricter limit specifically for /api/ask — 10 per minute per IP
+// Stricter per-IP limit on /api/ask — 10/min
 const askLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
@@ -35,13 +51,14 @@ const askLimiter = rateLimit({
 });
 app.use("/api/ask", askLimiter);
 
-// Daily limit per session — 50 questions per day
+// Daily limit — 50 /api/ask per (IP + session combo). Session ID is client-set
+// so determined users can rotate it, but IP-based fallback catches obvious abuse.
 const askDailyLimiter = rateLimit({
-  windowMs: 24 * 60 * 60 * 1000,  // 24 hours
+  windowMs: 24 * 60 * 60 * 1000,
   max: 50,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.headers["x-session-id"] || req.ip,
+  keyGenerator: (req) => `${req.ip}:${req.headers["x-session-id"] || "anon"}`,
   message: { error: "Daily question limit reached — come back tomorrow." },
 });
 app.use("/api/ask", askDailyLimiter);
@@ -51,10 +68,25 @@ app.use("/api/ask", askRouter);
 app.use("/api/issues", issuesRouter);
 app.use("/api/transit", transitRouter);
 
-app.get("/health", (_req, res) => res.json({ status: "ok" }));
+// Health check — actually pings dependencies instead of always returning ok.
+app.get("/health", async (_req, res) => {
+  const checks = { server: "ok" };
+  try {
+    const { default: supabase } = await import("./lib/supabase.js");
+    const { error } = await supabase
+      .from("knowledge_chunks")
+      .select("id", { count: "exact", head: true })
+      .limit(1);
+    checks.supabase = error ? `error: ${error.message}` : "ok";
+  } catch (e) {
+    checks.supabase = `error: ${e.message}`;
+  }
+  const allOk = Object.values(checks).every((v) => v === "ok");
+  res.status(allOk ? 200 : 503).json(checks);
+});
 
 // ── Scheduled jobs ────────────────────────────────────────────────────────────
-scheduleDigest(); // weekly email to facilities
+scheduleDigest();
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
