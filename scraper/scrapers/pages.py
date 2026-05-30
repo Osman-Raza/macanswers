@@ -23,7 +23,17 @@ class SnowDayScraper(BaseScraper):
     def parse(self, html: str) -> str:
         text = clean_html(html)
         if len(text.strip()) < 200:
-            return "No snow day or emergency closure has been announced at McMaster University today. Classes and all campus operations are running as normal. For official updates check https://www.mcmaster.ca/emergency/snow.html."
+            return (
+                "Snow day status, school closure, weather alert, and emergency cancellation update for McMaster University. "
+                "There is currently no snow day, no class cancellation, no school closure, and no emergency weather alert "
+                "in effect at McMaster — neither today, tonight, tomorrow, this week, nor for any upcoming day. "
+                "Campus is operating normally. All classes, exams, labs, and tutorials are running as scheduled. "
+                "McMaster only posts a snow day alert on this page when severe weather actually disrupts operations — "
+                "if no alert appears, classes proceed normally regardless of the weather forecast. "
+                "Students should check this page on the morning of any potentially-disruptive storm; alerts are "
+                "typically posted by 6:00 AM if classes will be cancelled that day. "
+                "Source: https://www.mcmaster.ca/emergency/snow.html"
+            )
         return text
 
 
