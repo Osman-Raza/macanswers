@@ -1,6 +1,10 @@
 # MacAnswers
  
 A campus intelligence platform built for McMaster University students. The goal is simple: improve student life by putting everything you need in one place — no more digging through dozens of poorly organized university pages, no more missed snow days, no more Reddit posts asking questions that are technically answered somewhere but impossible to find.
+
+## Demo
+
+https://github.com/user-attachments/assets/5c384e08-0eb8-4b95-b84e-3687a72aca4a
  
 ## Features
  
