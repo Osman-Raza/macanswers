@@ -1,6 +1,5 @@
 import { supabase } from "../auth/supabase.js";
 
-
 const BASE = import.meta.env.VITE_API_URL || "";
 
 async function request(path, options = {}) {
@@ -30,27 +29,23 @@ export const api = {
       headers: { "x-session-id": sessionId },
     });
   },
-
   getIssues: () => request("/api/issues"),
-  
-
   reportIssue: (payload) =>
     request("/api/issues", { method: "POST", body: JSON.stringify(payload) }),
-
   upvoteIssue: (id, userId) =>
     request(`/api/issues/${id}/upvote`, {
       method: "POST",
       body: JSON.stringify({ userId }),
     }),
-
   deleteIssue: (id) =>
     request(`/api/issues/${id}`, { method: "DELETE" }),
-
+  resolveIssue: (id) =>
+    request(`/api/issues/${id}/resolve`, { method: "PATCH" }),
+  checkAdmin: () => request("/api/issues/me/is-admin"),
   transitNext: (route, stop) => {
     const params = new URLSearchParams({ route });
     if (stop) params.set("stop", stop);
     return request(`/api/transit/next?${params}`);
   },
-
   shuttle: () => request("/api/transit/shuttle"),
 };

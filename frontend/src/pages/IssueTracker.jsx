@@ -31,7 +31,7 @@ const CATEGORY_LABELS = {
   other:         "📌 Other",
 };
 
-function IssueCard({ issue, onUpvote, onDelete, userUpvoted, isOwner }) {
+function IssueCard({ issue, onUpvote, onDelete, onResolve, userUpvoted, isOwner, isAdmin }) {
   return (
     <div className={styles.card}>
       <div className={styles.cardTop}>
@@ -48,6 +48,15 @@ function IssueCard({ issue, onUpvote, onDelete, userUpvoted, isOwner }) {
           >
             ▲ {issue.upvotes}
           </button>
+          {isAdmin && (
+            <button
+              className={styles.resolveBtn}
+              onClick={() => onResolve(issue.id)}
+              title="Mark resolved (admin)"
+            >
+              ✓
+            </button>
+          )}
           {isOwner && (
             <button
               className={styles.deleteBtn}
@@ -123,6 +132,7 @@ export default function IssueTracker({ onSignInRequired }) {
   const [issues, setIssues] = useState([]);
   const [pendingLngLat, setPendingLngLat] = useState(null);
   const [upvotedIds, setUpvotedIds] = useState(new Set());
+  const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuth();
 
   // Load user's existing upvotes from database
@@ -141,6 +151,14 @@ export default function IssueTracker({ onSignInRequired }) {
       }
     }
     loadUpvotes();
+  }, [user]);
+
+  // Check if the signed-in user is an admin (controls Resolve button visibility)
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    api.checkAdmin()
+      .then((data) => setIsAdmin(!!data.isAdmin))
+      .catch(() => setIsAdmin(false));
   }, [user]);
 
   useEffect(() => {
@@ -208,6 +226,16 @@ export default function IssueTracker({ onSignInRequired }) {
     }
   }
 
+  async function handleResolve(id) {
+    if (!confirm("Mark this issue as resolved? It will disappear from the map.")) return;
+    try {
+      await api.resolveIssue(id);
+      setIssues((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   async function handleReport(payload) {
     const newIssue = await api.reportIssue(payload);
     setIssues((prev) => [newIssue, ...prev]);
@@ -232,8 +260,10 @@ export default function IssueTracker({ onSignInRequired }) {
               issue={issue}
               onUpvote={handleUpvote}
               onDelete={handleDelete}
+              onResolve={handleResolve}
               userUpvoted={upvotedIds.has(issue.id)}
               isOwner={user?.id === issue.user_id}
+              isAdmin={isAdmin}
             />
           ))}
         </div>

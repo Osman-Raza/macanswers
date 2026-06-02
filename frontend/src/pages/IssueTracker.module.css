@@ -277,3 +277,31 @@
   border-color: #ef4444;
   color: #ef4444;
 }
+
+/* APPEND THIS BLOCK to your existing IssueTracker.module.css */
+
+.resolveBtn {
+  background: #10b981;
+  color: white;
+  border: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+  line-height: 1;
+}
+
+.resolveBtn:hover {
+  background: #059669;
+  transform: scale(1.05);
+}
+
+.resolveBtn:active {
+  transform: scale(0.95);
+}

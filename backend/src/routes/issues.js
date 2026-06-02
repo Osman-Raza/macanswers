@@ -20,7 +20,7 @@ const CATEGORIES = [
 // in the ADMIN_EMAILS env var, falling back to the hardcoded owner address.
 // Kept in code (not a DB role) for now because there's exactly one admin —
 // promote to a proper role-based system if/when others need access.
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "razao2@mcmaster.ca")
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
