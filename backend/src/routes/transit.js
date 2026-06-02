@@ -3,51 +3,58 @@ import supabase from "../lib/supabase.js";
 
 const router = Router();
 
-// HSR GTFS static files live at:
-// https://www.hamilton.ca/sites/default/files/media/browser/2022-07/HSR_GTFS.zip
-// For real-time arrivals use the GTFS-RT feed.
-// This route returns the next departures for a given route number from cache
-// (scrapers pre-load a `transit_schedule` table — see scraper/scrapers/hsr.py).
+// GTFS times can exceed 24:00 for trips that span past midnight as part of
+// "today's service day". E.g. 25:45:00 = 1:45 AM the next morning.
+// We need to handle both same-day departures and after-midnight ones.
 
-// ── GET /api/transit/next?route=51&stop=3456 ──────────────────────────────────
+function nowAsGtfsSeconds() {
+  const now = new Date();
+  return now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+}
+
+// Pad a seconds-since-midnight value back into GTFS HH:MM:SS format
+function gtfsTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
+// ── GET /api/transit/next?route=18&stop=3456 ─────────────────────────────────
 router.get("/next", async (req, res) => {
   const { route, stop } = req.query;
-
   if (!route) {
     return res.status(400).json({ error: "route query param required." });
   }
 
   try {
-    // Query pre-parsed schedule from Supabase (loaded by scraper)
+    const nowSec = nowAsGtfsSeconds();
+    const cutoff = gtfsTime(nowSec);
+
+    // Filter in the database: only departures >= now, ordered ascending,
+    // limit to 10. Lexicographic comparison works because GTFS times are
+    // zero-padded fixed-width.
     let query = supabase
       .from("transit_departures")
       .select("route_short_name, trip_headsign, departure_time, stop_id, stop_name")
-      .eq("route_short_name", route)
+      .in("route_short_name", [route, route.padStart(2, "0")])
+      .gte("departure_time", cutoff)
       .order("departure_time", { ascending: true })
-      .limit(5);
+      .limit(10);
 
     if (stop) query = query.eq("stop_id", stop);
 
     const { data, error } = await query;
     if (error) throw error;
 
-    // Filter to only upcoming departures (today)
-    const now = new Date();
-    const todaySeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
-
-    const upcoming = (data || []).filter((d) => {
-      const [h, m, s] = d.departure_time.split(":").map(Number);
-      return h * 3600 + m * 60 + s > todaySeconds;
-    });
-
-    return res.json({ route, upcoming });
+    return res.json({ route, upcoming: data || [] });
   } catch (err) {
     console.error("Transit error:", err);
     return res.status(500).json({ error: "Could not fetch transit data." });
   }
 });
 
-// ── GET /api/transit/shuttle — McMaster shuttle schedule ─────────────────────
+// ── GET /api/transit/shuttle ──────────────────────────────────────────────────
 router.get("/shuttle", async (_req, res) => {
   const { data, error } = await supabase
     .from("shuttle_schedule")
