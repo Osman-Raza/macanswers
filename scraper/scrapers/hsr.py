@@ -49,8 +49,10 @@ def run():
 
     # ── Wipe old data only after parse succeeded ────────────────────────────
     print("Clearing existing transit_departures ...")
-    # Supabase requires a filter on delete; use a tautology.
-    sb.table("transit_departures").delete().neq("id", -1).execute()
+    # Supabase requires a filter on delete. We use route_short_name since it's
+    # text and we know all rows have a non-empty value. The 'IS NOT NULL'
+    # equivalent in supabase-py is filtering on '' being not equal.
+    sb.table("transit_departures").delete().neq("route_short_name", "__never_matches__").execute()
 
     # ── Insert fresh data ───────────────────────────────────────────────────
     print("Inserting new departures ...")
