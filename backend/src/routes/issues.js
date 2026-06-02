@@ -15,6 +15,20 @@ const CATEGORIES = [
   "other",
 ];
 
+// ── Admin allowlist ───────────────────────────────────────────────────────────
+// Only these email addresses can mark issues as resolved. Comma-separated list
+// in the ADMIN_EMAILS env var, falling back to the hardcoded owner address.
+// Kept in code (not a DB role) for now because there's exactly one admin —
+// promote to a proper role-based system if/when others need access.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "razao2@mcmaster.ca")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAdmin(user) {
+  return !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+}
+
 const IssueSchema = z.object({
   title: z.string().min(5).max(120),
   description: z.string().max(500).optional(),
@@ -95,7 +109,6 @@ router.delete("/:id", requireMcMasterAuth, async (req, res) => {
 });
 
 // ── POST /api/issues/:id/upvote ───────────────────────────────────────────────
-// FIX: RPC expects `voter` (text), not `user_id`. Pass the user's UUID as a string.
 router.post("/:id/upvote", requireMcMasterAuth, async (req, res) => {
   const { id } = req.params;
   const { error } = await supabase.rpc("increment_upvote", {
@@ -106,8 +119,12 @@ router.post("/:id/upvote", requireMcMasterAuth, async (req, res) => {
   return res.json({ ok: true });
 });
 
-// ── PATCH /api/issues/:id/resolve ─────────────────────────────────────────────
+// ── PATCH /api/issues/:id/resolve — admin only ────────────────────────────────
 router.patch("/:id/resolve", requireMcMasterAuth, async (req, res) => {
+  if (!isAdmin(req.user)) {
+    return res.status(403).json({ error: "Only administrators can resolve issues." });
+  }
+
   const { id } = req.params;
   const { data, error } = await supabase
     .from("campus_issues")
@@ -118,6 +135,11 @@ router.patch("/:id/resolve", requireMcMasterAuth, async (req, res) => {
 
   if (error) return res.status(500).json({ error: error.message });
   return res.json(data);
+});
+
+// ── GET /api/issues/me/is-admin — for frontend to hide/show Resolve button ────
+router.get("/me/is-admin", requireMcMasterAuth, (req, res) => {
+  return res.json({ isAdmin: isAdmin(req.user) });
 });
 
 export default router;

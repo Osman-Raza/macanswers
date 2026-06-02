@@ -6,7 +6,6 @@ import rateLimit from "express-rate-limit";
 import askRouter from "./routes/ask.js";
 import issuesRouter from "./routes/issues.js";
 import transitRouter from "./routes/transit.js";
-import { scheduleDigest } from "./services/digest.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -84,9 +83,6 @@ app.get("/health", async (_req, res) => {
   const allOk = Object.values(checks).every((v) => v === "ok");
   res.status(allOk ? 200 : 503).json(checks);
 });
-
-// ── Scheduled jobs ────────────────────────────────────────────────────────────
-scheduleDigest();
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {

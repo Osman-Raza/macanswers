@@ -46,7 +46,7 @@ from scrapers.pages import (
 )
 from scrapers.hsr import run as run_hsr
 
-HOURLY = [SnowDayScraper, AnnouncementsScraper]
+HOURLY = [AnnouncementsScraper]
 
 SEMESTER = [
     TuitionScraper,

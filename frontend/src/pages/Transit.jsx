@@ -32,12 +32,13 @@ export default function Transit() {
     api.shuttle().then(setShuttle).catch(() => setShuttle([]));
   }, []);
 
-  async function lookup() {
-    if (!route.trim()) return;
+  async function lookup(overrideRoute) {
+    const routeToUse = (overrideRoute || route).trim();
+    if (!routeToUse) return;
     setLoading(true);
     setResults(null);
     try {
-      const data = await api.transitNext(route.trim());
+      const data = await api.transitNext(routeToUse);
       setResults(data);
     } catch (err) {
       setResults({ error: err.message });
@@ -80,7 +81,7 @@ export default function Transit() {
               <button
                 key={r}
                 className={`${styles.routeChip} ${route === r ? styles.activeChip : ""}`}
-                onClick={() => { setRoute(r); }}
+                onClick={() => { setRoute(r); lookup(r); }}
               >
                 {r}
               </button>
