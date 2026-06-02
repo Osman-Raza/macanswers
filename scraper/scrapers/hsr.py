@@ -48,11 +48,11 @@ def run():
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
     # ── Wipe old data only after parse succeeded ────────────────────────────
-    print("Clearing existing transit_departures ...")
-    # Supabase requires a filter on delete. We use route_short_name since it's
-    # text and we know all rows have a non-empty value. The 'IS NOT NULL'
-    # equivalent in supabase-py is filtering on '' being not equal.
-    sb.table("transit_departures").delete().neq("route_short_name", "__never_matches__").execute()
+    # Supabase has a statement timeout (~30s on free tier), so a single
+    # DELETE on a multi-million-row table will time out. Run a Postgres
+    # function that we install on demand to do batched deletes.
+    print("Clearing existing transit_departures (batched) ...")
+    _clear_table(sb)
 
     # ── Insert fresh data ───────────────────────────────────────────────────
     print("Inserting new departures ...")
@@ -117,6 +117,33 @@ def _flush(sb, rows: list[dict]):
         if (i // 1000) % 50 == 0:
             print(f"  Inserted {min(i + 1000, total):,} / {total:,} rows")
     print(f"  ✓ All {total:,} rows inserted.")
+
+
+def _clear_table(sb):
+    """
+    Delete all rows from transit_departures in batches small enough to fit
+    under Supabase's statement timeout. Loops until the table is empty.
+
+    Uses select+id-based delete because PostgREST doesn't expose TRUNCATE
+    and bulk-DELETE on millions of rows times out.
+    """
+    deleted_total = 0
+    batch_size = 10000
+    while True:
+        # Get a batch of IDs to delete
+        result = sb.table("transit_departures").select("id").limit(batch_size).execute()
+        ids = [r["id"] for r in (result.data or [])]
+        if not ids:
+            break
+
+        # Delete those specific IDs
+        sb.table("transit_departures").delete().in_("id", ids).execute()
+        deleted_total += len(ids)
+        if deleted_total % 100000 == 0 or len(ids) < batch_size:
+            print(f"  Cleared {deleted_total:,} rows ...")
+        time.sleep(0.1)
+
+    print(f"  ✓ Cleared {deleted_total:,} rows total.")
 
 
 if __name__ == "__main__":
