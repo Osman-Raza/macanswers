@@ -1,0 +1,65 @@
+.page {
+  min-height: calc(100vh - 60px);
+  padding: 48px 24px 96px;
+  background: #fafafa;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  background: white;
+  padding: 48px 56px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2937;
+  line-height: 1.65;
+}
+
+.container h1 {
+  font-size: 32px;
+  margin: 0 0 8px;
+  color: #7a003c;
+}
+
+.container h2 {
+  font-size: 22px;
+  margin: 36px 0 12px;
+  color: #7a003c;
+}
+
+.container h3 {
+  font-size: 17px;
+  margin: 24px 0 8px;
+  color: #374151;
+}
+
+.container p {
+  margin: 12px 0;
+}
+
+.container ul,
+.container ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.container li {
+  margin: 6px 0;
+}
+
+.container strong {
+  color: #111827;
+}
+
+.container a {
+  color: #7a003c;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .page { padding: 24px 12px 64px; }
+  .container { padding: 24px 20px; }
+  .container h1 { font-size: 26px; }
+  .container h2 { font-size: 19px; }
+}
