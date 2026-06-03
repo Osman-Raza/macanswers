@@ -13,7 +13,6 @@ import argparse
 import sys
 from scrapers.pages import (
     # Hourly
-    SnowDayScraper,
     AnnouncementsScraper,
     # Semester
     TuitionScraper,
@@ -39,6 +38,9 @@ from scrapers.pages import (
     CareerServicesScraper,
     ParkingTransportScraper,
     MSUServicesScraper,
+    OffCampusScraper,
+    MealPlansScraper,
+    LibraryScraper,
     AcademicIntegrityScraper,
     # NOTE: ProgramRequirementsScraper removed — was returning a hardcoded
     # "go look it up yourself" blurb that polluted search results. Re-add only
@@ -72,6 +74,9 @@ SEMESTER = [
     CareerServicesScraper,
     ParkingTransportScraper,
     MSUServicesScraper,
+    OffCampusScraper,
+    MealPlansScraper,
+    LibraryScraper,
     AcademicIntegrityScraper,
 ]
 

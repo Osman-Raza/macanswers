@@ -1,9 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
+import Groq from "groq-sdk";
 import { embed, generateAnswer } from "../lib/gemini.js";
 import supabase from "../lib/supabase.js";
 
 const router = Router();
+
+// Groq client used here for query expansion. (Answer generation uses its own
+// client inside lib/gemini.js — keeping them separate is fine.)
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const AskSchema = z.object({
   question: z.string().min(3).max(500),
@@ -14,6 +19,47 @@ const MATCH_THRESHOLD = 0.3;
 const MATCH_COUNT = 5;
 const DEBUG = process.env.DEBUG_ASK === "1";
 
+// ── Query expansion ───────────────────────────────────────────────────────────
+// Before embedding, send the user's question through Groq to expand it with
+// synonyms and formal terms McMaster's official pages might use. This bridges
+// vocabulary gaps — e.g. user says "therapy" but the wellness page says
+// "counselling", or user says "CS" but the page says "Computer Science."
+//
+// The expansion is COMBINED with the original question for embedding, so the
+// user's exact wording still matters but we get extra topical signal.
+//
+// Cost: ~500ms extra latency and a tiny Groq token bill per query. Failures
+// fall back to embedding the original question untouched.
+async function expandQuery(question) {
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: `You are a search query expander for a McMaster University student help system.
+Take the user's question and output an expanded search query containing:
+- The user's original terms
+- Likely synonyms McMaster's official pages might use (e.g. "therapy" -> "counselling", "rec" -> "Recreation Centre", "dorm" -> "residence")
+- Related formal terms (e.g. "cheating" -> "academic integrity", "drop a class" -> "course withdrawal")
+- Expand acronyms (e.g. "CS" -> "Computer Science", "OSAP" -> "Ontario Student Assistance Program")
+
+Output ONLY the expanded query as a single line of comma-separated phrases.
+No explanations, no quotes, no labels, no "Expanded:" prefix.
+Keep it under 30 words total.`,
+        },
+        { role: "user", content: question },
+      ],
+      max_tokens: 100,
+      temperature: 0.3,
+    });
+    return completion.choices[0].message.content.trim();
+  } catch (e) {
+    console.error("[ASK] query expansion failed:", e.message);
+    return ""; // graceful fallback — original query still embeds
+  }
+}
+
 // ── Snow day / closure fast-path ──────────────────────────────────────────────
 // We intercept weather-related closure questions BEFORE the vector search,
 // because (a) McMaster has no permanent "current status" page to scrape, and
@@ -21,31 +67,22 @@ const DEBUG = process.env.DEBUG_ASK === "1";
 // so an LLM-generated guess is worse than a deterministic check of recent
 // announcements.
 
-// Word lists for intent classification. To trigger the snow handler the
-// question must clearly be ABOUT WEATHER, not just contain a closure word.
 const WEATHER = /\b(snow|snowy|snowday|snowstorm|storm|stormy|blizzard|weather|winter|ice|icy|freezing rain|wind ?chill)\b/i;
 const CLOSURE = /\b(closed|closure|cancel(?:l?ed|l?ation)?|off|shut|open|running|operating|in person|class(?:es)?)\b/i;
 const TEMPORAL = /\b(today|tonight|tomorrow|tmrw|tmr|now|right now|currently|this (?:morning|afternoon|evening)|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
 
 /**
  * Decide whether a question is asking about a weather-related closure.
- * Conservative on purpose: requires explicit weather context. Questions like
- * "is the bus cancelled today" or "when is the career fair cancelled" fall
- * through to the normal vector search.
+ * Conservative on purpose: requires explicit weather context.
  */
 function isSnowDayQuestion(q) {
   const hasWeather = WEATHER.test(q);
   if (!hasWeather) return false;
-
-  // With weather word present, accept if there's either a temporal cue
-  // ("snow tomorrow?") or a closure word ("snow closure", "is mac closed
-  // because of weather").
   return TEMPORAL.test(q) || CLOSURE.test(q);
 }
 
 /**
  * Check the most recent McMaster Announcements chunk for an active closure.
- * Returns { closed: boolean, snippet: string|null }.
  */
 async function checkRecentClosure() {
   const { data, error } = await supabase
@@ -58,10 +95,6 @@ async function checkRecentClosure() {
   if (error || !data?.length) return { closed: false, snippet: null };
 
   const text = data[0].content || "";
-
-  // Require BOTH a closure word AND a weather word in the same chunk to
-  // count as an active snow day. A general "X cancelled" article (e.g. an
-  // event cancellation) shouldn't trigger this.
   const closureMention = /\b(closed|closure|cancel(?:l?ed|l?ation)?)\b/i.test(text);
   const weatherMention = WEATHER.test(text);
 
@@ -109,8 +142,16 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Normal RAG path
-    const queryEmbedding = await embed(question);
+    // Normal RAG path with query expansion
+    const expansion = await expandQuery(question);
+    const searchText = expansion ? `${question} ${expansion}` : question;
+
+    if (DEBUG) {
+      console.log(`\n[ASK] "${question}"`);
+      console.log(`[ASK] expanded: "${expansion}"`);
+    }
+
+    const queryEmbedding = await embed(searchText);
 
     const { data: chunks, error } = await supabase.rpc("match_chunks", {
       query_embedding: queryEmbedding,
@@ -121,7 +162,6 @@ router.post("/", async (req, res) => {
     if (error) throw error;
 
     if (DEBUG) {
-      console.log(`\n[ASK] "${question}"`);
       console.log(`[ASK] retrieved ${chunks?.length ?? 0} chunks @ threshold ${MATCH_THRESHOLD}`);
       (chunks || []).forEach((c, i) => {
         console.log(
