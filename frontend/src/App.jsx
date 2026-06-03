@@ -4,7 +4,10 @@ import { signOut } from "./auth/supabase.js";
 import KnowledgeBase from "./pages/KnowledgeBase.jsx";
 import IssueTracker from "./pages/IssueTracker.jsx";
 import Transit from "./pages/Transit.jsx";
+import Privacy from "./pages/Privacy.jsx";
+import Terms from "./pages/Terms.jsx";
 import SignInModal from "./auth/SignInModal.jsx";
+import Footer from "./components/Footer.jsx";
 import styles from "./App.module.css";
 
 const TABS = [
@@ -18,14 +21,23 @@ function AppInner() {
   const [showSignIn, setShowSignIn] = useState(false);
   const { user } = useAuth();
 
+  // When user clicks footer link, switch to the legal view
+  function navigateTo(view) {
+    setTab(view);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <div className={styles.app}>
       <header className={styles.header}>
-        <div className={styles.brand}>
+        <div
+          className={styles.brand}
+          onClick={() => setTab("ask")}
+          style={{ cursor: "pointer" }}
+        >
           <span className={styles.logo}>M</span>
           <span className={styles.wordmark}>MacAnswers</span>
         </div>
-
         <nav className={styles.nav}>
           {TABS.map((t) => (
             <button
@@ -38,7 +50,6 @@ function AppInner() {
             </button>
           ))}
         </nav>
-
         <div className={styles.authArea}>
           {user ? (
             <div className={styles.userInfo}>
@@ -57,12 +68,18 @@ function AppInner() {
         {tab === "ask"     && <KnowledgeBase />}
         {tab === "issues"  && <IssueTracker onSignInRequired={() => setShowSignIn(true)} />}
         {tab === "transit" && <Transit />}
+        {tab === "privacy" && <Privacy />}
+        {tab === "terms"   && <Terms />}
       </main>
+
+      <Footer onNavigate={navigateTo} />
 
       {showSignIn && (
         <SignInModal
           onClose={() => setShowSignIn(false)}
           reason="report or vote on issues"
+          onShowPrivacy={() => { setShowSignIn(false); navigateTo("privacy"); }}
+          onShowTerms={() => { setShowSignIn(false); navigateTo("terms"); }}
         />
       )}
     </div>

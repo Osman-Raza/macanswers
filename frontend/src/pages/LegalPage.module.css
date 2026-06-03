@@ -1,7 +1,9 @@
 .page {
-  min-height: calc(100vh - 60px);
+  flex: 1;
+  overflow-y: auto;
   padding: 48px 24px 96px;
   background: #fafafa;
+  min-height: 0;
 }
 
 .container {

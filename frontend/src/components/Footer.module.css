@@ -1,10 +1,11 @@
 .footer {
   border-top: 1px solid #e5e7eb;
-  background: #fafafa;
-  padding: 16px 24px;
+  background: white;
+  padding: 14px 24px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 12px;
+  color: #9ca3af;
+  flex-shrink: 0;
 }
 
 .inner {
@@ -13,34 +14,45 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
 .note {
   color: #9ca3af;
+  font-size: 12px;
 }
 
 .links {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.links a {
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
   color: #6b7280;
-  text-decoration: none;
   transition: color 0.15s ease;
 }
 
-.links a:hover {
+.linkBtn:hover {
   color: #7a003c;
+  text-decoration: underline;
 }
 
 .sep {
   color: #d1d5db;
 }
 
-@media (max-width: 500px) {
-  .inner { flex-direction: column; align-items: flex-start; }
+@media (max-width: 600px) {
+  .inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px;
+  }
 }
