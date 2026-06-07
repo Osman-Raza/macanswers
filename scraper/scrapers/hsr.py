@@ -48,7 +48,14 @@ def run():
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
     # ── Wipe old data only after parse succeeded ────────────────────────────
-    print("Clearing existing transit_departures (batched) ...")
+    # We use TRUNCATE via a Postgres function because:
+    # 1. PostgREST's bulk DELETE via .in_(ids) hits URL-length limits and/or
+    #    response-serialization errors ("JSON could not be generated") on
+    #    multi-million-row tables.
+    # 2. TRUNCATE is orders of magnitude faster than DELETE (milliseconds
+    #    vs. minutes) because it bypasses the per-row overhead.
+    # 3. It's atomic — no partial state if the call is interrupted.
+    print("Truncating existing transit_departures ...")
     _clear_table(sb)
 
     # ── Insert fresh data ───────────────────────────────────────────────────
@@ -118,45 +125,20 @@ def _flush(sb, rows: list[dict]):
 
 def _clear_table(sb):
     """
-    Delete all rows from transit_departures in batches small enough to fit
-    under Supabase PostgREST's URL length limit.
+    Wipe transit_departures via a Postgres TRUNCATE called through an RPC.
 
-    Why batched: PostgREST's bulk DELETE via .in_() encodes the ID list in the
-    URL. 10,000 UUIDs = ~370KB of URL → 400 Bad Request from the gateway.
-    1,000 UUIDs ≈ 37KB, well under typical 100KB URL limits.
+    Requires the following function to exist in Supabase (one-time setup):
 
-    Why no returning data: `returning="minimal"` tells PostgREST not to send
-    the deleted rows back, which saves bandwidth and avoids response-size
-    issues on top of the URL-size issue.
+        create or replace function truncate_transit_departures()
+        returns void
+        language sql
+        security definer
+        as $$
+          truncate table transit_departures restart identity;
+        $$;
     """
-    deleted_total = 0
-    # Hard limit: keep URL under ~50KB by capping IDs per request.
-    batch_size = 1000
-
-    while True:
-        # Get a batch of IDs to delete
-        result = (
-            sb.table("transit_departures")
-            .select("id")
-            .limit(batch_size)
-            .execute()
-        )
-        ids = [r["id"] for r in (result.data or [])]
-        if not ids:
-            break
-
-        # Delete those specific IDs, with no return payload
-        sb.table("transit_departures") \
-            .delete(returning="minimal") \
-            .in_("id", ids) \
-            .execute()
-
-        deleted_total += len(ids)
-        if deleted_total % 50000 == 0 or len(ids) < batch_size:
-            print(f"  Cleared {deleted_total:,} rows ...")
-        time.sleep(0.05)
-
-    print(f"  ✓ Cleared {deleted_total:,} rows total.")
+    sb.rpc("truncate_transit_departures", {}).execute()
+    print("  ✓ Cleared transit_departures (truncate).")
 
 
 if __name__ == "__main__":
