@@ -48,9 +48,6 @@ def run():
     sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
     # ── Wipe old data only after parse succeeded ────────────────────────────
-    # Supabase has a statement timeout (~30s on free tier), so a single
-    # DELETE on a multi-million-row table will time out. Run a Postgres
-    # function that we install on demand to do batched deletes.
     print("Clearing existing transit_departures (batched) ...")
     _clear_table(sb)
 
@@ -122,26 +119,42 @@ def _flush(sb, rows: list[dict]):
 def _clear_table(sb):
     """
     Delete all rows from transit_departures in batches small enough to fit
-    under Supabase's statement timeout. Loops until the table is empty.
+    under Supabase PostgREST's URL length limit.
 
-    Uses select+id-based delete because PostgREST doesn't expose TRUNCATE
-    and bulk-DELETE on millions of rows times out.
+    Why batched: PostgREST's bulk DELETE via .in_() encodes the ID list in the
+    URL. 10,000 UUIDs = ~370KB of URL → 400 Bad Request from the gateway.
+    1,000 UUIDs ≈ 37KB, well under typical 100KB URL limits.
+
+    Why no returning data: `returning="minimal"` tells PostgREST not to send
+    the deleted rows back, which saves bandwidth and avoids response-size
+    issues on top of the URL-size issue.
     """
     deleted_total = 0
-    batch_size = 10000
+    # Hard limit: keep URL under ~50KB by capping IDs per request.
+    batch_size = 1000
+
     while True:
         # Get a batch of IDs to delete
-        result = sb.table("transit_departures").select("id").limit(batch_size).execute()
+        result = (
+            sb.table("transit_departures")
+            .select("id")
+            .limit(batch_size)
+            .execute()
+        )
         ids = [r["id"] for r in (result.data or [])]
         if not ids:
             break
 
-        # Delete those specific IDs
-        sb.table("transit_departures").delete().in_("id", ids).execute()
+        # Delete those specific IDs, with no return payload
+        sb.table("transit_departures") \
+            .delete(returning="minimal") \
+            .in_("id", ids) \
+            .execute()
+
         deleted_total += len(ids)
-        if deleted_total % 100000 == 0 or len(ids) < batch_size:
+        if deleted_total % 50000 == 0 or len(ids) < batch_size:
             print(f"  Cleared {deleted_total:,} rows ...")
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     print(f"  ✓ Cleared {deleted_total:,} rows total.")
 
